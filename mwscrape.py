@@ -62,7 +62,7 @@ def parse_args():
     argparser = argparse.ArgumentParser()
     argparser.add_argument('site',
                            help=('MediaWiki site to scrape (host name), '
-                                 'e.g. en.m.wikipeia.org'))
+                                 'e.g. en.m.wikipedia.org'))
     argparser.add_argument('-c', '--couch',
                            help=('CouchDB server URL. '
                                  'Default: %(default)s'),
