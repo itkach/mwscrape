@@ -29,7 +29,7 @@ pip install -r requirements.txt
 
    positional arguments:
      site                  MediaWiki site to scrape (host name), e.g.
-                           en.m.wikipeia.org
+                           en.m.wikipedia.org
 
    optional arguments:
      -h, --help            show this help message and exit
