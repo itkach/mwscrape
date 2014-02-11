@@ -47,5 +47,5 @@ pip install -r requirements.txt
 revisions of previously scraped pages in CouchDB and requests parsed
 page data if new revision is available. CouchDB data dumps (compressed
 with [[http://tukaani.org/xz/][xz]]) for some Wikipedia sites are available at
-http://dl.aarddict.org/mwcouch. Download CoudbDB database file to
+http://dl.aarddict.org/mwcouch. Download database file to
 CouchDB's data directory (e.g. ~/var/lib/couchdb~) and decompress.
