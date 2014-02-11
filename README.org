@@ -1,0 +1,51 @@
+/mwscrape.py/ downloads rendered articles from MediaWiki sites via
+web API and stores them in CouchDB to enable further offline
+processing.
+
+** Prerequsites
+
+   - [[http://couchdb.apache.org][CouchDB]] (1.3.0 or newer)
+   - [[http://gitscm.com/][git]]
+   - [[http://python.org][Python 2.7]]
+   - [[https://pypi.python.org/pypi/virtualenv/][virtualenv]]
+
+** Installation
+
+   #+BEGIN_SRC sh
+virtualenv env-mwscrape
+source env-mwscrape/bin/activate
+cd env-mwscrape
+git clone https://github.com/itkach/mwscrape.git
+cd mwscrape
+pip install -r requirements.txt
+   #+END_SRC
+
+** Usage
+
+   #+BEGIN_SRC sh
+   python -m mwscrape [-h] [-c COUCH] [--db DB] [--titles TITLES [TITLES ...]]
+                      [--start START] [-S]
+                      site
+
+   positional arguments:
+     site                  MediaWiki site to scrape (host name), e.g.
+                           en.m.wikipeia.org
+
+   optional arguments:
+     -h, --help            show this help message and exit
+     -c COUCH, --couch COUCH
+                           CouchDB server URL. Default: http://localhost:5984
+     --db DB               CouchDB database name. If not specified, the name will
+                           be derived from Mediawiki host name.
+     --titles TITLES [TITLES ...]
+                           Download article pages with these names (titles).
+     --start START         Download all article pages starting with this name
+     -S, --siteinfo-only   Fetch or update siteinfo, then exit
+   #+END_SRC
+
+/mwscrape.py/ compares page revisions reported by MediaWiki API with
+revisions of previously scraped pages in CouchDB and requests parsed
+page data if new revision is available. CouchDB data dumps (compressed
+with [[http://tukaani.org/xz/][xz]]) for some Wikipedia sites are available at
+http://dl.aarddict.org/mwcouch. Download CoudbDB database file to
+CouchDB's data directory (e.g. ~/var/lib/couchdb~) and decompress.
