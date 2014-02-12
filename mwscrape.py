@@ -35,7 +35,7 @@ def fix_server_url(general_siteinfo):
     return server
 
 
-def upate_siteinfo(site, couch_server, db_name):
+def update_siteinfo(site, couch_server, db_name):
     try:
         siteinfo_db = couch_server.create('siteinfo')
     except couchdb.PreconditionFailed:
@@ -93,7 +93,7 @@ def main():
     site = mwclient.Site(args.site)
     couch_server = couchdb.Server(args.couch)
 
-    upate_siteinfo(site, couch_server, db_name)
+    update_siteinfo(site, couch_server, db_name)
 
     if args.siteinfo_only:
         return
