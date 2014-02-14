@@ -177,6 +177,8 @@ def main():
         sessions_db[session_id] = session_doc
 
     for index, page in enumerate(pages):
+        if index > 0 and index % 100 == 0:
+            sessions_db.compact()
         title = page.name
         print('%7s %s' % (index, title))
 
