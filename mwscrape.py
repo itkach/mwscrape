@@ -1,4 +1,5 @@
 from __future__  import print_function
+import socket
 import urlparse
 import mwclient
 import couchdb
@@ -78,6 +79,11 @@ def parse_args():
     argparser.add_argument('--start',
                            help=('Download all article pages '
                                  'starting with this name'))
+    argparser.add_argument('--timeout',
+                           default=30.0,
+                           type=float,
+                           help=('Network communications timeout. '
+                                 'Default: %(default)ss'))
     argparser.add_argument('-S', '--siteinfo-only', action='store_true',
                            help=('Fetch or update siteinfo, then exit'))
 
@@ -87,6 +93,8 @@ def parse_args():
 def main():
 
     args = parse_args()
+
+    socket.setdefaulttimeout(args.timeout)
 
     db_name = args.db or args.site.replace('.', '-')
 
