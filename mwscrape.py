@@ -1,10 +1,12 @@
 from __future__  import print_function
+import argparse
+import couchdb
+import mwclient
 import socket
 import urlparse
-import mwclient
-import couchdb
-import argparse
+import uuid
 
+from datetime import datetime
 
 def fix_server_url(general_siteinfo):
     """
@@ -61,7 +63,7 @@ def update_siteinfo(site, couch_server, db_name):
 
 def parse_args():
     argparser = argparse.ArgumentParser()
-    argparser.add_argument('site',
+    argparser.add_argument('site', nargs='?',
                            help=('MediaWiki site to scrape (host name), '
                                  'e.g. en.m.wikipedia.org'))
     argparser.add_argument('-c', '--couch',
@@ -78,7 +80,7 @@ def parse_args():
                                  'these names (titles).'))
     argparser.add_argument('--start',
                            help=('Download all article pages '
-                                 'starting with this name'))
+                                 'beginning with this name'))
     argparser.add_argument('--timeout',
                            default=30.0,
                            type=float,
@@ -86,6 +88,17 @@ def parse_args():
                                  'Default: %(default)ss'))
     argparser.add_argument('-S', '--siteinfo-only', action='store_true',
                            help=('Fetch or update siteinfo, then exit'))
+    argparser.add_argument('-r', '--resume', nargs='?',
+                           default='',
+                           metavar='SESSION ID',
+                           help=('Resume previous scrape session. '
+                                 'This relies on stats saved in '
+                                 'mwscrape database.'))
+    argparser.add_argument('--sessions-db-name',
+                           default='mwscrape',
+                           help=('Name of database where '
+                                 'session info is stored. '
+                                 'Default: %(default)s'))
 
     return argparser.parse_args()
 
@@ -96,10 +109,49 @@ def main():
 
     socket.setdefaulttimeout(args.timeout)
 
-    db_name = args.db or args.site.replace('.', '-')
-
-    site = mwclient.Site(args.site)
     couch_server = couchdb.Server(args.couch)
+
+    sessions_db_name = args.sessions_db_name
+    try:
+        sessions_db = couch_server.create(sessions_db_name)
+    except couchdb.PreconditionFailed:
+        sessions_db = couch_server[sessions_db_name]
+
+    if args.resume or args.resume is None:
+        session_id = args.resume
+        if session_id is None:
+            current_doc = sessions_db['$current']
+            session_id = current_doc['session_id']
+        print('Resuming session %s' % session_id)
+        session_doc = sessions_db[session_id]
+        site_host = session_doc['site']
+        db_name = session_doc['db_name']
+        session_doc['resumed_at'] = datetime.utcnow().isoformat()
+        start_page_name = session_doc.get('last_page_name')
+        if not start_page_name:
+            start_page_name = args.start
+        sessions_db[session_id] = session_doc
+    else:
+        site_host = args.site
+        db_name = args.db
+        start_page_name = args.start
+        if not site_host:
+            print('Site to scrape is not specified')
+            raise SystemExit(1)
+        if not db_name:
+            db_name = site_host.replace('.', '-')
+        session_id = uuid.uuid4().hex
+        sessions_db[session_id] = {
+            'created_at': datetime.utcnow().isoformat(),
+            'site': site_host,
+            'db_name': db_name
+        }
+        current_doc = sessions_db.get('$current', {})
+        current_doc['session_id'] = session_id
+        sessions_db['$current'] = current_doc
+
+
+    site = mwclient.Site(site_host)
 
     update_siteinfo(site, couch_server, db_name)
 
@@ -114,13 +166,27 @@ def main():
     if args.titles:
         pages = (site.Pages[title.decode('utf8')] for title in args.titles)
     else:
-        pages = site.allpages(start=args.start)
+        print('Starting at %s' % start_page_name)
+        pages = site.allpages(start=start_page_name)
+
+    def inc_count(count_name):
+        session_doc = sessions_db[session_id]
+        count = session_doc.get(count_name, 0)
+        session_doc[count_name] = count + 1
+        sessions_db[session_id] = session_doc
 
     for index, page in enumerate(pages):
         title = page.name
         print('%7s %s' % (index, title))
+
+        session_doc = sessions_db[session_id]
+        session_doc['last_page_name'] = title
+        session_doc['updated_at'] = datetime.utcnow().isoformat()
+        sessions_db[session_id] = session_doc
+
         if not page.exists:
             print('Not found: %r' % title)
+            inc_count('not_found')
             continue
         try:
             aliases = set()
@@ -134,6 +200,7 @@ def main():
                 title = page.name
             if page.redirect:
                 print('Failed to resolve redirect %s', title)
+                inc_count('failed_redirect')
                 continue
             doc = db.get(title)
             if doc:
@@ -145,8 +212,10 @@ def main():
                 if page.revision == revid:
                     print('%s is up to date (rev. %s), skipping' %
                           (title, revid))
+                    inc_count('up_to_date')
                     continue
                 else:
+                    inc_count('updated')
                     print('New rev. %s is available for %s (have rev. %s)' %
                           (page.revision, title, revid))
 
@@ -155,10 +224,12 @@ def main():
             raise
         except Exception as e:
             print('ERROR: %s' % e)
+            inc_count('error')
             continue
         if doc:
             doc.update(parse)
         else:
+            inc_count('new')
             doc = parse
             if aliases:
                 doc['aliases'] = list(aliases)
