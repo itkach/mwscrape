@@ -3,6 +3,7 @@ import argparse
 import couchdb
 import mwclient
 import socket
+import traceback
 import urlparse
 import uuid
 
@@ -222,8 +223,9 @@ def main():
             parse = site.api('parse', page=title)
         except KeyboardInterrupt:
             raise
-        except Exception as e:
-            print('ERROR: %s' % e)
+        except Exception:
+            print('Failed to process %s:' % title)
+            traceback.print_exc()
             inc_count('error')
             continue
         if doc:
