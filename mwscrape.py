@@ -2,6 +2,7 @@ from __future__  import print_function
 import argparse
 import couchdb
 import mwclient
+import os
 import socket
 import traceback
 import urlparse
@@ -79,7 +80,10 @@ def parse_args():
                            default=None)
     argparser.add_argument('--titles', nargs='+',
                            help=('Download article pages with '
-                                 'these names (titles).'))
+                                 'these names (titles). '
+                                 'It name starts with @ it is '
+                                 'interpreted as name of file containing titles, '
+                                 'one per line, utf8 encoded.'))
     argparser.add_argument('--start',
                            help=('Download all article pages '
                                  'beginning with this name'))
@@ -165,8 +169,18 @@ def main():
     except couchdb.PreconditionFailed:
         db = couch_server[db_name]
 
+    def titles_from_args(titles):
+        for title in titles:
+            if title.startswith('@'):
+                with open(os.path.expanduser(title[1:])) as f:
+                    for line in f:
+                        yield line.strip()
+            else:
+                yield title
+
     if args.titles:
-        pages = (site.Pages[title.decode('utf8')] for title in args.titles)
+        pages = (site.Pages[title.decode('utf8')]
+                 for title in titles_from_args(args.titles))
     else:
         print('Starting at %s' % start_page_name)
         pages = site.allpages(start=start_page_name)
