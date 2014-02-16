@@ -87,6 +87,11 @@ def parse_args():
     argparser.add_argument('--start',
                            help=('Download all article pages '
                                  'beginning with this name'))
+    argparser.add_argument('--changes-since',
+                           help=('Download all article pages '
+                                 'that change since specified time. '
+                                 'Timestamp format is yyyymmddhhmmss. '
+                                 'See https://www.mediawiki.org/wiki/Timestamp'))
     argparser.add_argument('--timeout',
                            default=30.0,
                            type=float,
@@ -147,6 +152,7 @@ def main():
         if not db_name:
             db_name = site_host.replace('.', '-')
         session_id = uuid.uuid4().hex
+        print('Starting session %s' % session_id)
         sessions_db[session_id] = {
             'created_at': datetime.utcnow().isoformat(),
             'site': site_host,
@@ -178,9 +184,27 @@ def main():
             else:
                 yield title
 
+    def titles_from_recent_changes(timestamp):
+        changes = site.recentchanges(start=timestamp,
+                                     namespace=0,
+                                     show='!minor|!redirect')
+        for change in changes:
+            title = change.get('title')
+            if title:
+                doc = db.get(title)
+                doc_revid = doc.get('parse', {}).get('revid') if doc else None
+                revid = change.get('revid')
+                if doc_revid == revid:
+                    continue
+                yield title
+
     if args.titles:
         pages = (site.Pages[title.decode('utf8')]
                  for title in titles_from_args(args.titles))
+    elif args.changes_since:
+        print('Getting recent changes (since %s)' % args.changes_since)
+        pages = (site.Pages[title]
+                 for title in titles_from_recent_changes(args.changes_since))
     else:
         print('Starting at %s' % start_page_name)
         pages = site.allpages(start=start_page_name)
