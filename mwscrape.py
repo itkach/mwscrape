@@ -110,6 +110,9 @@ def parse_args():
                            help=('Name of database where '
                                  'session info is stored. '
                                  'Default: %(default)s'))
+    argparser.add_argument('--desc',
+                           action='store_true',
+                           help=('Request all apges in descending order'))
 
     return argparser.parse_args()
 
@@ -207,7 +210,8 @@ def main():
                  for title in titles_from_recent_changes(args.changes_since))
     else:
         print('Starting at %s' % start_page_name)
-        pages = site.allpages(start=start_page_name)
+        pages = site.allpages(start=start_page_name,
+                              dir='descending' if args.desc else 'ascending')
 
     def inc_count(count_name):
         session_doc = sessions_db[session_id]
