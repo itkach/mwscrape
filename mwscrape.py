@@ -141,9 +141,10 @@ def main():
         site_host = session_doc['site']
         db_name = session_doc['db_name']
         session_doc['resumed_at'] = datetime.utcnow().isoformat()
-        start_page_name = session_doc.get('last_page_name')
-        if not start_page_name:
+        if args.start:
             start_page_name = args.start
+        else:
+            start_page_name = session_doc.get('last_page_name', args.start)
         sessions_db[session_id] = session_doc
     else:
         site_host = args.site
