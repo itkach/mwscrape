@@ -23,24 +23,41 @@ pip install -r requirements.txt
 ** Usage
 
    #+BEGIN_SRC sh
-   python -m mwscrape [-h] [-c COUCH] [--db DB] [--titles TITLES [TITLES ...]]
-                      [--start START] [-S]
-                      site
+python -m mwscrape [-h] [-c COUCH] [--db DB] [--titles TITLES [TITLES ...]]
+                   [--start START] [--changes-since CHANGES_SINCE]
+                   [--timeout TIMEOUT] [-S] [-r [SESSION ID]]
+                   [--sessions-db-name SESSIONS_DB_NAME] [--desc]
+                   [site]
 
-   positional arguments:
-     site                  MediaWiki site to scrape (host name), e.g.
-                           en.m.wikipedia.org
+positional arguments:
+  site                  MediaWiki site to scrape (host name), e.g.
+                        en.m.wikipedia.org
 
-   optional arguments:
-     -h, --help            show this help message and exit
-     -c COUCH, --couch COUCH
-                           CouchDB server URL. Default: http://localhost:5984
-     --db DB               CouchDB database name. If not specified, the name will
-                           be derived from Mediawiki host name.
-     --titles TITLES [TITLES ...]
-                           Download article pages with these names (titles).
-     --start START         Download all article pages starting with this name
-     -S, --siteinfo-only   Fetch or update siteinfo, then exit
+optional arguments:
+  -h, --help            show this help message and exit
+  -c COUCH, --couch COUCH
+                        CouchDB server URL. Default: http://localhost:5984
+  --db DB               CouchDB database name. If not specified, the name will
+                        be derived from Mediawiki host name.
+  --titles TITLES [TITLES ...]
+                        Download article pages with these names (titles). It
+                        name starts with @ it is interpreted as name of file
+                        containing titles, one per line, utf8 encoded.
+  --start START         Download all article pages beginning with this name
+  --changes-since CHANGES_SINCE
+                        Download all article pages that change since specified
+                        time. Timestamp format is yyyymmddhhmmss. See
+                        https://www.mediawiki.org/wiki/Timestamp
+  --timeout TIMEOUT     Network communications timeout. Default: 30.0s
+  -S, --siteinfo-only   Fetch or update siteinfo, then exit
+  -r [SESSION ID], --resume [SESSION ID]
+                        Resume previous scrape session. This relies on stats
+                        saved in mwscrape database.
+  --sessions-db-name SESSIONS_DB_NAME
+                        Name of database where session info is stored.
+                        Default: mwscrape
+  --desc                Request all apges in descending order
+
    #+END_SRC
 
 /mwscrape.py/ compares page revisions reported by MediaWiki API with
@@ -49,3 +66,12 @@ page data if new revision is available. CouchDB data dumps (compressed
 with [[http://tukaani.org/xz/][xz]]) for some Wikipedia sites are available at
 http://dl.aarddict.org/mwcouch. Download database file to
 CouchDB's data directory (e.g. ~/var/lib/couchdb~) and decompress.
+
+/mwscape.py/ also creates a CouchDB design document ~w~ with show
+function ~html~ to allow viewing article html returned by MediaWiki
+API and navigating to html of other collected articles.
+For example, to view rendered html for article /A/ in
+database /simple.m.wikipedia.org/, in a web browser go to the
+following address (assuming CouchDB is running on localhost):
+
+http://127.0.0.1:5984/simple-m-wikipedia-org/_design/w/_show/html/A

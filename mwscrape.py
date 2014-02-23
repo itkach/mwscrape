@@ -117,6 +117,26 @@ def parse_args():
     return argparser.parse_args()
 
 
+SHOW_FUNC = r"""
+function(doc, req)
+{
+  var r = /href="\/wiki\/(.*?)"/gi;
+  var replace = function(match, p1, offset, string) {
+    return 'href="' + p1.replace(/_/g, ' ') + '"';
+  };
+  return doc.parse.text['*'].replace(r, replace);
+}
+"""
+
+def set_show_func(db, show_func=SHOW_FUNC, force=False):
+    design_doc = db.get('_design/w', {})
+    shows = design_doc.get('shows', {})
+    if force or not shows.get('html'):
+        shows['html'] = show_func
+        design_doc['shows'] = shows
+        db['_design/w'] = design_doc
+
+
 def main():
 
     args = parse_args()
@@ -178,6 +198,8 @@ def main():
         db = couch_server.create(db_name)
     except couchdb.PreconditionFailed:
         db = couch_server[db_name]
+
+    set_show_func(db)
 
     def titles_from_args(titles):
         for title in titles:
