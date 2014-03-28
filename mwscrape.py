@@ -112,7 +112,7 @@ def parse_args():
                                  'Default: %(default)s'))
     argparser.add_argument('--desc',
                            action='store_true',
-                           help=('Request all apges in descending order'))
+                           help=('Request all pages in descending order'))
 
     return argparser.parse_args()
 
