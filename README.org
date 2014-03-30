@@ -71,7 +71,7 @@ CouchDB's data directory (e.g. ~/var/lib/couchdb~) and decompress.
 function ~html~ to allow viewing article html returned by MediaWiki
 API and navigating to html of other collected articles.
 For example, to view rendered html for article /A/ in
-database /simple.m.wikipedia.org/, in a web browser go to the
+database /simple-m-wikipedia-org/, in a web browser go to the
 following address (assuming CouchDB is running on localhost):
 
 http://127.0.0.1:5984/simple-m-wikipedia-org/_design/w/_show/html/A
