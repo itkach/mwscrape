@@ -6,13 +6,19 @@
 
 import argparse
 import couchdb
+
 from urlparse import urlparse
+
+from gevent import monkey; monkey.patch_all()
+from gevent.pool import Pool
 
 
 def parse_args():
     argparser = argparse.ArgumentParser()
     argparser.add_argument('couch_url')
     argparser.add_argument('-s', '--start')
+    argparser.add_argument('-b', '--batch-size', type=int, default=10)
+    argparser.add_argument('-v', '--verbose', action='store_true')
     return argparser.parse_args()
 
 
@@ -33,6 +39,54 @@ def mkclient(couch_url):
     return server[couch_db]
 
 
+def resolve(db, doc_id, verbose=False):
+    doc = db.get(doc_id, conflicts=True)
+    conflicts = doc.get('_conflicts')
+    messages = []
+    if conflicts:
+        best_mw_revid = doc['parse']['revid']
+        docs = [doc]
+        best_doc = doc
+        all_aliases = set(doc.get('aliases', ()))
+        aliase_count = len(all_aliases)
+        article_revisions = set([best_mw_revid])
+        for conflict_rev in conflicts:
+            conflict_doc = db.get(doc_id, rev=conflict_rev)
+            docs.append(conflict_doc)
+            conflict_mw_revid = conflict_doc['parse']['revid']
+            article_revisions.add(conflict_mw_revid)
+            if conflict_mw_revid > best_mw_revid:
+                best_mw_revid = conflict_mw_revid
+                best_doc = conflict_doc
+            aliases = set(doc.get('aliases', ()))
+            all_aliases.update(aliases)
+        new_aliases_count = len(all_aliases) - aliase_count
+        article_rev_count = len(article_revisions) - 1
+        if verbose:
+            messages.append('------')
+        messages.append(
+            '%s [%d conflict(s): +%dr, +%da]' %
+            (doc_id, len(conflicts), article_rev_count, new_aliases_count))
+        for doc in docs:
+            if doc.rev == best_doc.rev:
+                if verbose:
+                    messages.append('Keeping %s' % doc.rev)
+                doc['aliases'] = list(all_aliases)
+                db.save(doc)
+            else:
+                if verbose:
+                    messages.append('Discarding %s' % doc.rev)
+                db.delete(doc)
+        result = True
+    else:
+        if verbose:
+            messages.append('-')
+        result = False
+    if messages:
+        print '\n'.join(messages)
+    return result
+
+
 def main():
     args = parse_args()
     db = mkclient(args.couch_url)
@@ -40,43 +94,11 @@ def main():
     if args.start:
         viewoptions['startkey'] = args.start
         viewoptions['startkey_docid'] = args.start
-    for row in db.iterview('_all_docs', 100, **viewoptions):
-        doc = db.get(row.id, conflicts=True)
-        conflicts = doc.get('_conflicts')
-        if conflicts:
-            best_mw_revid = doc['parse']['revid']
-            docs = [doc]
-            best_doc = doc
-            print row.id, '\n', doc.rev, best_mw_revid, conflicts
-            all_aliases = set(doc.get('aliases', ()))
-            aliase_count = len(all_aliases)
-            for conflict_rev in conflicts:
-                conflict_doc = db.get(row.id, rev=conflict_rev)
-                docs.append(conflict_doc)
-                conflict_mw_revid = conflict_doc['parse']['revid']
-                #print 'conflict mw revid:', conflict_mw_revid
-                if conflict_mw_revid > best_mw_revid:
-                    best_mw_revid = conflict_mw_revid
-                    best_doc = conflict_doc
-                aliases = set(doc.get('aliases', ()))
-                all_aliases.update(aliases)
-            #print all_aliases
-            new_aliases_count = len(all_aliases) - aliase_count
-            #print 'New aliases found in conflict:', new_aliases_count
-            #print 'Best doc: ', best_doc.rev
-            if new_aliases_count > 0:
-                print '+A', doc.id
-            if best_doc.rev != doc.rev > 0:
-                print '+R', doc.id
 
-            for doc in docs:
-                if doc.rev == best_doc.rev:
-                    print 'Keeping ', doc.rev
-                    doc['aliases'] = list(all_aliases)
-                    db.save(doc)
-                else:
-                    print 'Discarding ', doc.rev
-                    db.delete(doc)
+    pool = Pool(args.batch_size)
+    for row in db.iterview('_all_docs', args.batch_size, **viewoptions):
+        pool.spawn(resolve, db, row.id, verbose=args.verbose)
+    pool.join()
 
 
 if __name__ == '__main__':
