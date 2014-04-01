@@ -75,3 +75,36 @@ database /simple-m-wikipedia-org/, in a web browser go to the
 following address (assuming CouchDB is running on localhost):
 
 http://127.0.0.1:5984/simple-m-wikipedia-org/_design/w/_show/html/A
+
+If databases are combined via replication articles with the same
+title will be stored as [[https://wiki.apache.org/couchdb/Replication_and_conflicts][conflicts]]. /resolveconflicts.py/ script is
+provided to merge conflicting versions (combine aliases, select
+highest MediaWiki article revision, discard pther
+revisions). /resolveconflicts.py/ requires additional dependency,
+/gevent/:
+
+   #+BEGIN_SRC sh
+source env-mwscrape/bin/activate
+pip install gevent
+   #+END_SRC
+
+Usage:
+
+   #+BEGIN_SRC sh
+python -m resolveconflicts [-h] [-s START] [-b BATCH_SIZE] [-v] couch_url
+
+positional arguments:
+  couch_url
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -s START, --start START
+  -b BATCH_SIZE, --batch-size BATCH_SIZE
+  -v, --verbose
+   #+END_SRC
+
+Example:
+
+   #+BEGIN_SRC sh
+python -m resolveconflicts http://localhost:5984/en-m-wikipedia-org
+   #+END_SRC
