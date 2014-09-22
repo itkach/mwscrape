@@ -53,7 +53,7 @@ def update_siteinfo(site, couch_server, db_name):
         siteinfo_db = couch_server['siteinfo']
 
     siteinfo = site.api('query', meta='siteinfo',
-                        siprop='general|interwikimap|rightsinfo|statistics'
+                        siprop='general|interwikimap|rightsinfo|statistics|namespaces'
     )['query']
 
     fix_server_url(siteinfo['general'])
