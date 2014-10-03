@@ -6,18 +6,18 @@
 
 import argparse
 import couchdb
+import time
 
+from datetime import timedelta
 from urlparse import urlparse
-
-from gevent import monkey; monkey.patch_all()
-from gevent.pool import Pool
-
+from concurrent import futures
 
 def parse_args():
     argparser = argparse.ArgumentParser()
     argparser.add_argument('couch_url')
     argparser.add_argument('-s', '--start')
-    argparser.add_argument('-b', '--batch-size', type=int, default=10)
+    argparser.add_argument('-b', '--batch-size', type=int, default=500)
+    argparser.add_argument('-w', '--workers', type=int, default=50)
     argparser.add_argument('-v', '--verbose', action='store_true')
     return argparser.parse_args()
 
@@ -80,7 +80,7 @@ def resolve(db, doc_id, verbose=False):
         result = True
     else:
         if verbose:
-            messages.append('-')
+            messages.append('[no conflicts] %s' % doc_id)
         result = False
     if messages:
         print '\n'.join(messages)
@@ -95,10 +95,11 @@ def main():
         viewoptions['startkey'] = args.start
         viewoptions['startkey_docid'] = args.start
 
-    pool = Pool(args.batch_size)
-    for row in db.iterview('_all_docs', args.batch_size, **viewoptions):
-        pool.spawn(resolve, db, row.id, verbose=args.verbose)
-    pool.join()
+    t0 = time.time()
+    with futures.ThreadPoolExecutor(max_workers=args.workers) as executor:
+        for row in db.iterview('_all_docs', args.batch_size, **viewoptions):
+            executor.submit(resolve, db, row.id, verbose=args.verbose)
+    print 'Done in %s' % timedelta(seconds=int(time.time()-t0))
 
 
 if __name__ == '__main__':

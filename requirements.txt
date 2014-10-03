@@ -1,2 +1,0 @@
-CouchDB==0.9
--e git+https://github.com/mwclient/mwclient@86b93bf47b3dbb95a05b5c1655f6c62be83c7c40#egg=mwclient-dev
