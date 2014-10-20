@@ -12,7 +12,8 @@ import os
 import socket
 import traceback
 import urlparse
-import uuid
+import time
+import random
 
 from datetime import datetime
 
@@ -181,7 +182,9 @@ def main():
             raise SystemExit(1)
         if not db_name:
             db_name = site_host.replace('.', '-')
-        session_id = uuid.uuid4().hex
+        session_id = '-'.join((db_name,
+                               str(int(time.time())),
+                               str(int(1000*random.random()))))
         print('Starting session %s' % session_id)
         sessions_db[session_id] = {
             'created_at': datetime.utcnow().isoformat(),
