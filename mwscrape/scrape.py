@@ -172,11 +172,16 @@ def main():
             start_page_name = args.start
         else:
             start_page_name = session_doc.get('last_page_name', args.start)
+        if args.desc:
+            descending = True
+        else:
+            descending = session_doc.get('descending', False)
         sessions_db[session_id] = session_doc
     else:
         site_host = args.site
         db_name = args.db
         start_page_name = args.start
+        descending = args.desc
         if not site_host:
             print('Site to scrape is not specified')
             raise SystemExit(1)
@@ -189,7 +194,8 @@ def main():
         sessions_db[session_id] = {
             'created_at': datetime.utcnow().isoformat(),
             'site': site_host,
-            'db_name': db_name
+            'db_name': db_name,
+            'descending': descending
         }
         current_doc = sessions_db.get('$current', {})
         current_doc['session_id'] = session_id
@@ -243,7 +249,7 @@ def main():
     else:
         print('Starting at %s' % start_page_name)
         pages = site.allpages(start=start_page_name,
-                              dir='descending' if args.desc else 'ascending')
+                              dir='descending' if descending else 'ascending')
 
     def inc_count(count_name):
         session_doc = sessions_db[session_id]
