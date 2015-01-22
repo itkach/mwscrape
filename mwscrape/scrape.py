@@ -8,6 +8,7 @@ from __future__  import print_function
 import argparse
 import couchdb
 import mwclient
+import mwclient.page
 import os
 import socket
 import traceback
@@ -15,6 +16,7 @@ import urlparse
 import time
 import random
 
+from collections import namedtuple
 from datetime import datetime
 
 def fix_server_url(general_siteinfo):
@@ -150,6 +152,25 @@ def set_show_func(db, show_func=SHOW_FUNC, force=False):
         db['_design/w'] = design_doc
 
 
+Redirect = namedtuple('Redirect', 'page fragment')
+
+def redirects_to(site, from_title):
+    """ Same as mwclient.page.Page.redirects_to except it returns page and fragment
+    in a named tuple instead of just target page
+    """
+    info = site.api('query', prop='pageprops', titles=from_title, redirects='')['query']
+    if 'redirects' in info:
+        for page in info['redirects']:
+            if page['from'] == from_title:
+                return Redirect(
+                    page=mwclient.page.Page(site, page['to']),
+                    fragment=page.get('tofragment', u'')
+                )
+        return None
+    else:
+        return None
+
+
 def main():
 
     args = parse_args()
@@ -280,23 +301,50 @@ def main():
             continue
         try:
             aliases = set()
+            redirect_count = 0
             while page.redirect:
-                aliases.add(title)
-                page = page.redirects_to()
-                print('%s ==> %s' % (title, page.name))
-                if page.name in aliases:
-                    print('Redirect cycle: %r' % aliases)
+                redirect_count += 1
+                redirect_target = redirects_to(site, page.name)
+                frag = redirect_target.fragment
+                if frag:
+                    alias = (title, frag)
+                else:
+                    alias = title
+                aliases.add(alias)
+
+                page = redirect_target.page
+                print('%s ==> %s' % (
+                    title,
+                    page.name + ('#'+frag) if frag else ''))
+
+                if redirect_count >= 10:
+                    print('Too many redirect levels: %r' % aliases)
                     break
+
                 title = page.name
+
             if page.redirect:
                 print('Failed to resolve redirect %s', title)
                 inc_count('failed_redirect')
                 continue
+
             doc = db.get(title)
             if doc:
-                current_aliases = set(doc.get('aliases', []))
+                current_aliases = set()
+                for alias in doc.get('aliases', ()):
+                    if isinstance(alias, list):
+                        alias = tuple(alias)
+                    current_aliases.add(alias)
                 if not aliases.issubset(current_aliases):
-                    doc['aliases'] = list(aliases|current_aliases)
+                    merged_aliases = aliases|current_aliases
+                    #remove aliases without fragment if one with fragment is present
+                    #this is mostly to cleanup aliases in old scrapes
+                    to_remove = set()
+                    for alias in merged_aliases:
+                        if isinstance(alias, tuple):
+                            to_remove.add(alias[0])
+                    merged_aliases = merged_aliases - to_remove
+                    doc['aliases'] = list(merged_aliases)
                     db[title] = doc
                 revid = doc.get('parse', {}).get('revid')
                 if page.revision == revid:
