@@ -104,7 +104,7 @@ http://127.0.0.1:5984/simple-m-wikipedia-org/_design/w/_show/html/A
 If databases are combined via replication articles with the same
 title will be stored as [[https://wiki.apache.org/couchdb/Replication_and_conflicts][conflicts]]. /mwresolvec/ script is
 provided to merge conflicting versions (combine aliases, select
-highest MediaWiki article revision, discard pther
+highest MediaWiki article revision, discard other
 revisions).
 Usage:
 
