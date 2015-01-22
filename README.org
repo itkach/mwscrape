@@ -108,7 +108,7 @@ Some sites expose Mediawiki API at path different from Wikipedia's
 default, specify it with ~--site-path~:
 
    #+BEGIN_SRC sh
-   mwscrape lurkmore.to --desc --site-path=/
+   mwscrape lurkmore.to --site-path=/
    #+END_SRC
 
 
