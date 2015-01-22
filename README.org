@@ -60,6 +60,9 @@ positional arguments:
 
 optional arguments:
   -h, --help            show this help message and exit
+  --site-path SITE_PATH
+                        MediaWiki site API pathDefault: /w/
+  --site-ext SITE_EXT   MediaWiki site API script extensionDefault: .php
   -c COUCH, --couch COUCH
                         CouchDB server URL. Default: http://localhost:5984
   --db DB               CouchDB database name. If not specified, the name will
