@@ -76,6 +76,12 @@ def parse_args():
     argparser.add_argument('site', nargs='?',
                            help=('MediaWiki site to scrape (host name), '
                                  'e.g. en.m.wikipedia.org'))
+    argparser.add_argument('--site-path', default='/w/',
+                           help=('MediaWiki site API path'
+                                 'Default: %(default)s'))
+    argparser.add_argument('--site-ext', default='.php',
+                           help=('MediaWiki site API script extension'
+                                 'Default: %(default)s'))
     argparser.add_argument('-c', '--couch',
                            help=('CouchDB server URL. '
                                  'Default: %(default)s'),
@@ -202,7 +208,7 @@ def main():
         sessions_db['$current'] = current_doc
 
 
-    site = mwclient.Site(site_host)
+    site = mwclient.Site(site_host, path=args.site_path, ext=args.site_ext)
 
     update_siteinfo(site, couch_server, db_name)
 
