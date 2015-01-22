@@ -27,6 +27,11 @@ processing.
    sudo service couchdb start
    #+END_SRC
 
+   By default CouchDB uses /snappy/ for file compression. Change
+   ~file_compression~ configuration parameter in ~couchdb~ config section to
+   /deflate_6/. This reduces database disc space usage
+   significantly.
+
    Create new Python virtual environment:
 
    #+BEGIN_SRC sh
@@ -47,7 +52,6 @@ processing.
 ** Usage
 
    #+BEGIN_SRC sh
-mwscrape -h
 usage: mwscrape [-h] [-c COUCH] [--db DB] [--titles TITLES [TITLES ...]]
                 [--start START] [--changes-since CHANGES_SINCE]
                 [--timeout TIMEOUT] [-S] [-r [SESSION ID]]
@@ -87,6 +91,26 @@ optional arguments:
   --desc                Request all pages in descending order
 
    #+END_SRC
+
+For example, to get English Wiktionary:
+
+   #+BEGIN_SRC sh
+   mwscrape en.m.wiktionary.org
+   #+END_SRC
+
+to get the same but work through list of titles in reverse order:
+
+   #+BEGIN_SRC sh
+   mwscrape en.m.wiktionary.org --desc
+   #+END_SRC
+
+Some sites expose Mediawiki API at path different from Wikipedia's
+default, specify it with ~--site-path~:
+
+   #+BEGIN_SRC sh
+   mwscrape lurkmore.to --desc --site-path=/
+   #+END_SRC
+
 
 /mwscrape/ compares page revisions reported by MediaWiki API with
 revisions of previously scraped pages in CouchDB and requests parsed
