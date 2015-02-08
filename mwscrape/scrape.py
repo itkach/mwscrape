@@ -384,6 +384,8 @@ def main():
             parse = site.api('parse', page=title)
         except KeyboardInterrupt:
             raise
+        except couchdb.ResourceConflict:
+            print('Update conflict, skipping: %s' % title)
         except Exception:
             print('Failed to process %s:' % title)
             traceback.print_exc()
@@ -396,7 +398,10 @@ def main():
             doc = parse
             if aliases:
                 doc['aliases'] = list(aliases)
-        db[title] = doc
+        try:
+            db[title] = doc
+        except couchdb.ResourceConflict:
+            print('Update conflict, skipping: %s' % title)
 
 
 if __name__ == '__main__':
