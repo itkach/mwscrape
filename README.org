@@ -52,10 +52,12 @@ processing.
 ** Usage
 
    #+BEGIN_SRC sh
-usage: mwscrape [-h] [-c COUCH] [--db DB] [--titles TITLES [TITLES ...]]
-                [--start START] [--changes-since CHANGES_SINCE]
-                [--timeout TIMEOUT] [-S] [-r [SESSION ID]]
+usage: mwscrape [-h] [--site-path SITE_PATH] [--site-ext SITE_EXT] [-c COUCH]
+                [--db DB] [--titles TITLES [TITLES ...]] [--start START]
+                [--changes-since CHANGES_SINCE] [--recent-days RECENT_DAYS]
+                [--recent] [--timeout TIMEOUT] [-S] [-r [SESSION ID]]
                 [--sessions-db-name SESSIONS_DB_NAME] [--desc]
+                [--delete-not-found]
                 [site]
 
 positional arguments:
@@ -79,7 +81,11 @@ optional arguments:
   --changes-since CHANGES_SINCE
                         Download all article pages that change since specified
                         time. Timestamp format is yyyymmddhhmmss. See
-                        https://www.mediawiki.org/wiki/Timestamp
+                        https://www.mediawiki.org/wiki/Timestamp. Hours,
+                        minutes and seconds can be omited
+  --recent-days RECENT_DAYS
+                        Number of days to look back for recent changes
+  --recent              Download recently changed articles only
   --timeout TIMEOUT     Network communications timeout. Default: 30.0s
   -S, --siteinfo-only   Fetch or update siteinfo, then exit
   -r [SESSION ID], --resume [SESSION ID]
@@ -89,6 +95,7 @@ optional arguments:
                         Name of database where session info is stored.
                         Default: mwscrape
   --desc                Request all pages in descending order
+  --delete-not-found    Remove non-existing pages from the database
 
    #+END_SRC
 
