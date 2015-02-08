@@ -129,6 +129,10 @@ def parse_args():
                            action='store_true',
                            help=('Request all pages in descending order'))
 
+    argparser.add_argument('--delete-not-found',
+                           action='store_true',
+                           help=('Remove non-existing pages from the database'))
+
     return argparser.parse_args()
 
 
@@ -298,6 +302,13 @@ def main():
         if not page.exists:
             print('Not found: %r' % title)
             inc_count('not_found')
+            if args.delete_not_found:
+                try:
+                    del db[title]
+                except couchdb.ResourceNotFound:
+                    print('%r was not in the database' % title)
+                else:
+                    print('%r removed from the database' % title)
             continue
         try:
             aliases = set()
