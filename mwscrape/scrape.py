@@ -181,6 +181,13 @@ def redirects_to(site, from_title):
         return None
 
 
+def scheme_and_host(site_host):
+    p = urlparse.urlparse(site_host)
+    scheme = p.scheme if p.scheme else 'https'
+    host = p.netloc if p.scheme else site_host
+    return scheme, host
+
+
 def main():
 
     args = parse_args()
@@ -203,6 +210,7 @@ def main():
         print('Resuming session %s' % session_id)
         session_doc = sessions_db[session_id]
         site_host = session_doc['site']
+        scheme, host = scheme_and_host(site_host)
         db_name = session_doc['db_name']
         session_doc['resumed_at'] = datetime.utcnow().isoformat()
         if args.start:
@@ -222,8 +230,9 @@ def main():
         if not site_host:
             print('Site to scrape is not specified')
             raise SystemExit(1)
+        scheme, host = scheme_and_host(site_host)
         if not db_name:
-            db_name = site_host.replace('.', '-')
+            db_name = host.replace('.', '-')
         session_id = '-'.join((db_name,
                                str(int(time.time())),
                                str(int(1000*random.random()))))
@@ -239,7 +248,7 @@ def main():
         sessions_db['$current'] = current_doc
 
 
-    site = mwclient.Site(site_host, path=args.site_path, ext=args.site_ext)
+    site = mwclient.Site((scheme, host), path=args.site_path, ext=args.site_ext)
 
     update_siteinfo(site, couch_server, db_name)
 
