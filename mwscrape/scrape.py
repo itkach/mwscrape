@@ -322,15 +322,17 @@ def main():
         sessions_db[session_id] = session_doc
 
         if not page.exists:
-            print('Not found: %r' % title)
+            print('Not found: %s' % title)
             inc_count('not_found')
             if args.delete_not_found:
                 try:
                     del db[title]
                 except couchdb.ResourceNotFound:
-                    print('%r was not in the database' % title)
+                    print('%s was not in the database' % title)
+                except couchdb.ResourceConflict:
+                    print('Conflict while deleting %s' % title)
                 else:
-                    print('%r removed from the database' % title)
+                    print('%s removed from the database' % title)
             continue
         try:
             aliases = set()
