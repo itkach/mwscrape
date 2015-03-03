@@ -8,7 +8,8 @@ setup(name='mwscrape',
       url='http://github.com/itkach/mwscrape',
       license='MPL 2.0',
       packages=['mwscrape'],
-      install_requires=['CouchDB >= 0.10', 'mwclient >= 0.7', 'futures'],
+      #mwclient appearst to need six, but doesn't declare it as dependency
+      install_requires=['CouchDB >= 0.10', 'mwclient >= 0.7', 'six', 'pylru'],
       entry_points={'console_scripts': [
           'mwscrape=mwscrape.scrape:main',
           'mwresolvec=mwscrape.resolveconflicts:main',

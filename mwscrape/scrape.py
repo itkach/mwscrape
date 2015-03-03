@@ -18,6 +18,8 @@ import random
 
 from collections import namedtuple
 from datetime import datetime, timedelta
+from multiprocessing import RLock
+from multiprocessing.pool import ThreadPool
 
 def fix_server_url(general_siteinfo):
     """
@@ -138,6 +140,14 @@ def parse_args():
     argparser.add_argument('--delete-not-found',
                            action='store_true',
                            help=('Remove non-existing pages from the database'))
+
+    argparser.add_argument('--fast',
+                           action='store_true',
+                           help=('Scrape "fast"'))
+
+    argparser.add_argument('--faster',
+                           action='store_true',
+                           help=('Scrape faster still'))
 
     return argparser.parse_args()
 
@@ -304,23 +314,26 @@ def main():
         pages = site.allpages(start=start_page_name,
                               dir='descending' if descending else 'ascending')
 
+    #threads are updating the same session document,
+    #we don't want to have conflicts
+    lock = RLock()
+
     def inc_count(count_name):
-        session_doc = sessions_db[session_id]
-        count = session_doc.get(count_name, 0)
-        session_doc[count_name] = count + 1
-        sessions_db[session_id] = session_doc
+        with lock:
+            session_doc = sessions_db[session_id]
+            count = session_doc.get(count_name, 0)
+            session_doc[count_name] = count + 1
+            sessions_db[session_id] = session_doc
 
-    for index, page in enumerate(pages):
-        if index > 0 and index % 100 == 0:
-            sessions_db.compact()
+    def update_session(title):
+        with lock:
+            session_doc = sessions_db[session_id]
+            session_doc['last_page_name'] = title
+            session_doc['updated_at'] = datetime.utcnow().isoformat()
+            sessions_db[session_id] = session_doc
+
+    def process(page):
         title = page.name
-        print('%7s %s' % (index, title))
-
-        session_doc = sessions_db[session_id]
-        session_doc['last_page_name'] = title
-        session_doc['updated_at'] = datetime.utcnow().isoformat()
-        sessions_db[session_id] = session_doc
-
         if not page.exists:
             print('Not found: %s' % title)
             inc_count('not_found')
@@ -333,7 +346,7 @@ def main():
                     print('Conflict while deleting %s' % title)
                 else:
                     print('%s removed from the database' % title)
-            continue
+            return
         try:
             aliases = set()
             redirect_count = 0
@@ -361,7 +374,7 @@ def main():
             if page.redirect:
                 print('Failed to resolve redirect %s', title)
                 inc_count('failed_redirect')
-                continue
+                return
 
             doc = db.get(title)
             if doc:
@@ -386,7 +399,7 @@ def main():
                     print('%s is up to date (rev. %s), skipping' %
                           (title, revid))
                     inc_count('up_to_date')
-                    continue
+                    return
                 else:
                     inc_count('updated')
                     print('New rev. %s is available for %s (have rev. %s)' %
@@ -401,7 +414,7 @@ def main():
             print('Failed to process %s:' % title)
             traceback.print_exc()
             inc_count('error')
-            continue
+            return
         if doc:
             doc.update(parse)
         else:
@@ -414,6 +427,36 @@ def main():
         except couchdb.ResourceConflict:
             print('Update conflict, skipping: %s' % title)
 
+    import pylru
+    seen = pylru.lrucache(10000)
+
+    def ipages(pages):
+        for index, page in enumerate(pages):
+            if index > 0 and index % 100 == 0:
+                sessions_db.compact()
+            title = page.name
+            print('%7s %s' % (index, title))
+            if title in seen:
+                print('Already saw %s, skipping' % (title,))
+                continue
+            seen[title] = True
+            update_session(title)
+            yield page
+
+
+    if args.fast or args.faster:
+        if args.fast:
+            pool = ThreadPool(2)
+        elif args.faster:
+            pool = ThreadPool(4)
+        else:
+            raise SystemExit(1)
+        for _result in pool.imap(process, ipages(pages)):
+            pass
+
+    else:
+        for page in ipages(pages):
+            process(page)
 
 if __name__ == '__main__':
     main()
