@@ -410,6 +410,7 @@ def main():
             raise
         except couchdb.ResourceConflict:
             print('Update conflict, skipping: %s' % title)
+            return
         except Exception:
             print('Failed to process %s:' % title)
             traceback.print_exc()
@@ -426,6 +427,7 @@ def main():
             db[title] = doc
         except couchdb.ResourceConflict:
             print('Update conflict, skipping: %s' % title)
+            return
 
     import pylru
     seen = pylru.lrucache(10000)
