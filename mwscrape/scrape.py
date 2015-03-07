@@ -141,13 +141,11 @@ def parse_args():
                            action='store_true',
                            help=('Remove non-existing pages from the database'))
 
-    argparser.add_argument('--fast',
-                           action='store_true',
-                           help=('Scrape "fast"'))
-
-    argparser.add_argument('--faster',
-                           action='store_true',
-                           help=('Scrape faster still'))
+    argparser.add_argument('--speed',
+                           type=int,
+                           choices=range(0, 4),
+                           default=0,
+                           help=('Scrape speed'))
 
     return argparser.parse_args()
 
@@ -444,13 +442,8 @@ def main():
             yield page
 
 
-    if args.fast or args.faster:
-        if args.fast:
-            pool = ThreadPool(2)
-        elif args.faster:
-            pool = ThreadPool(4)
-        else:
-            raise SystemExit(1)
+    if args.speed:
+        pool = ThreadPool(processes=args.speed*2)
         for _result in pool.imap(process, ipages(pages)):
             pass
 
