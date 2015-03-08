@@ -361,7 +361,7 @@ def main():
                 page = redirect_target.page
                 print('%s ==> %s' % (
                     title,
-                    page.name + ('#'+frag) if frag else ''))
+                    page.name + (('#'+frag) if frag else '')))
 
                 if redirect_count >= 10:
                     print('Too many redirect levels: %r' % aliases)
