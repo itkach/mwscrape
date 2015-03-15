@@ -148,7 +148,7 @@ def parse_args():
 
     argparser.add_argument('--speed',
                            type=int,
-                           choices=range(0, 4),
+                           choices=range(0, 6),
                            default=0,
                            help=('Scrape speed'))
 
