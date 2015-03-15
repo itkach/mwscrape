@@ -7,12 +7,15 @@
 from __future__  import print_function
 import argparse
 import couchdb
+import fcntl
+import hashlib
 import mwclient
 import mwclient.page
 import os
 import socket
 import traceback
 import urlparse
+import tempfile
 import time
 import random
 
@@ -20,6 +23,8 @@ from collections import namedtuple
 from datetime import datetime, timedelta
 from multiprocessing import RLock
 from multiprocessing.pool import ThreadPool
+from contextlib import contextmanager
+
 
 def fix_server_url(general_siteinfo):
     """
@@ -194,6 +199,23 @@ def scheme_and_host(site_host):
     scheme = p.scheme if p.scheme else 'https'
     host = p.netloc if p.scheme else site_host
     return scheme, host
+
+
+
+@contextmanager
+def flock(path):
+    with open(path, 'w') as lock_fd:
+        try:
+            fcntl.flock(lock_fd, fcntl.LOCK_EX|fcntl.LOCK_NB)
+            yield
+        except IOError as ex:
+            if ex.errno == 11:
+                print (
+                    'Scrape for this host is already in progress. '
+                    'Use --speed option instead of starting multiple processes.')
+            raise SystemExit(1)
+        finally:
+            lock_fd.close()
 
 
 def main():
@@ -442,14 +464,17 @@ def main():
             yield page
 
 
-    if args.speed:
-        pool = ThreadPool(processes=args.speed*2)
-        for _result in pool.imap(process, ipages(pages)):
-            pass
+    with flock(os.path.join(tempfile.gettempdir(),
+                            hashlib.sha1(host).hexdigest())):
+        if args.speed:
+            pool = ThreadPool(processes=args.speed*2)
+            for _result in pool.imap(process, ipages(pages)):
+                pass
 
-    else:
-        for page in ipages(pages):
-            process(page)
+        else:
+            for page in ipages(pages):
+                process(page)
+
 
 if __name__ == '__main__':
     main()
