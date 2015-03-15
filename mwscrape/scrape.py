@@ -201,6 +201,17 @@ def scheme_and_host(site_host):
     return scheme, host
 
 
+def mkcouch(url):
+    parsed = urlparse.urlparse(url)
+    server_url = parsed.scheme + '://'+ parsed.netloc
+    server = couchdb.Server(server_url)
+    user = parsed.username
+    password = parsed.password
+    if password:
+        print('Connecting %s as user %s' % (server.resource.url, user))
+        server.resource.credentials = (user, password)
+    return server
+
 
 @contextmanager
 def flock(path):
@@ -224,7 +235,7 @@ def main():
 
     socket.setdefaulttimeout(args.timeout)
 
-    couch_server = couchdb.Server(args.couch)
+    couch_server = mkcouch(args.couch)
 
     sessions_db_name = args.sessions_db_name
     try:
