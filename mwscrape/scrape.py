@@ -17,6 +17,7 @@ import traceback
 import urlparse
 import tempfile
 import time
+import thread
 import random
 
 from collections import namedtuple
@@ -437,8 +438,9 @@ def main():
                           (page.revision, title, revid))
 
             parse = site.api('parse', page=title)
-        except KeyboardInterrupt:
-            raise
+        except KeyboardInterrupt as ki:
+            print ('Caught KeyboardInterrupt', ki)
+            thread.interrupt_main()
         except couchdb.ResourceConflict:
             print('Update conflict, skipping: %s' % title)
             return
