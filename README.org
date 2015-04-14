@@ -48,12 +48,8 @@ processing.
    #+BEGIN_SRC sh
    pip install git+https://github.com/itkach/mwscrape
    #+END_SRC
-   
-   Install /six/ Python module:
-   #+BEGIN_SRC sh
-   pip install six
-   #+END_SRC
-   
+
+
 ** Usage
 
    #+BEGIN_SRC sh
