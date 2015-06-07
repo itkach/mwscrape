@@ -53,12 +53,13 @@ processing.
 ** Usage
 
    #+BEGIN_SRC sh
+   
 usage: mwscrape [-h] [--site-path SITE_PATH] [--site-ext SITE_EXT] [-c COUCH]
                 [--db DB] [--titles TITLES [TITLES ...]] [--start START]
                 [--changes-since CHANGES_SINCE] [--recent-days RECENT_DAYS]
                 [--recent] [--timeout TIMEOUT] [-S] [-r [SESSION ID]]
                 [--sessions-db-name SESSIONS_DB_NAME] [--desc]
-                [--delete-not-found]
+                [--delete-not-found] [--speed {0,1,2,3,4,5}]
                 [site]
 
 positional arguments:
@@ -97,6 +98,8 @@ optional arguments:
                         Default: mwscrape
   --desc                Request all pages in descending order
   --delete-not-found    Remove non-existing pages from the database
+  --speed {0,1,2,3,4,5}
+                        Scrape speed
 
    #+END_SRC
 
