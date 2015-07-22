@@ -316,6 +316,7 @@ def main():
     def titles_from_recent_changes(timestamp):
         changes = site.recentchanges(start=timestamp,
                                      namespace=0,
+                                     toponly=1,
                                      show='!minor|!redirect|!anon')
         for change in changes:
             title = change.get('title')
