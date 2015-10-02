@@ -153,6 +153,15 @@ def parse_args():
                            default=0,
                            help=('Scrape speed'))
 
+    argparser.add_argument('--delay',
+                           type=float,
+                           default=0,
+                           help=('Pause before requesting rendered article '
+                                 'for this many seconds. Default: %(default)s.'
+                                 'Some sites limit request rate so that even '
+                                 'single-threaded, request-at-a-time scrapes are too fast'
+                                 'and additional delay needs to be introduced'))
+
     return argparser.parse_args()
 
 
@@ -437,7 +446,8 @@ def main():
                     inc_count('updated')
                     print('New rev. %s is available for %s (have rev. %s)' %
                           (page.revision, title, revid))
-
+            if args.delay:
+                time.sleep(args.delay)
             parse = site.api('parse', page=title)
         except KeyboardInterrupt as ki:
             print ('Caught KeyboardInterrupt', ki)
@@ -480,7 +490,7 @@ def main():
 
     with flock(os.path.join(tempfile.gettempdir(),
                             hashlib.sha1(host).hexdigest())):
-        if args.speed:
+        if args.speed and not args.delay:
             pool = ThreadPool(processes=args.speed*2)
             for _result in pool.imap(process, ipages(pages)):
                 pass
