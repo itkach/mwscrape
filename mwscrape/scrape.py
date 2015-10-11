@@ -162,6 +162,13 @@ def parse_args():
                                  'single-threaded, request-at-a-time scrapes are too fast'
                                  'and additional delay needs to be introduced'))
 
+    argparser.add_argument('--namespace',
+                           type=int,
+                           default=0,
+                           help=('ID of MediaWiki namespace to '
+                                 'scrape. Default: %(default)s'))
+
+
     return argparser.parse_args()
 
 
@@ -337,8 +344,10 @@ def main():
                     continue
                 yield title
 
+    page_list = mwclient.listing.PageList(site, namespace=args.namespace)
+
     if args.titles:
-        pages = (site.Pages[title.decode('utf8')]
+        pages = (page_list[title.decode('utf8')]
                  for title in titles_from_args(args.titles))
     elif args.changes_since or args.recent:
         if args.recent:
@@ -349,11 +358,12 @@ def main():
         else:
             changes_since = args.changes_since.ljust(14, '0')
         print('Getting recent changes (since %s)' % changes_since)
-        pages = (site.Pages[title]
+        pages = (page_list[title]
                  for title in titles_from_recent_changes(changes_since))
     else:
         print('Starting at %s' % start_page_name)
         pages = site.allpages(start=start_page_name,
+                              namespace=args.namespace,
                               dir='descending' if descending else 'ascending')
 
     #threads are updating the same session document,
