@@ -246,6 +246,26 @@ def flock(path):
             lock_fd.close()
 
 
+def display_str(value, encoding='utf8'):
+    """
+
+    >>> display_str(None)
+    ''
+
+    >>> display_str(u'\u0000')
+    '\\x00'
+
+    >>> display_str(u'\u044b', encoding='ascii')
+    "u'\\\\u044b'"
+
+    """
+    try:
+        value_str = '' if value is None else value.encode(encoding)
+    except UnicodeEncodeError:
+        value_str = repr(value).encode(encoding)
+    return value_str
+
+
 def main():
 
     args = parse_args()
@@ -387,17 +407,20 @@ def main():
     def process(page):
         title = page.name
         if not page.exists:
-            print('Not found: %s' % title)
+            title_str = display_str(title)
+            print('Not found: %s' % title_str)
             inc_count('not_found')
             if args.delete_not_found:
                 try:
                     del db[title]
                 except couchdb.ResourceNotFound:
-                    print('%s was not in the database' % title)
+                    print('%s was not in the database' % title_str)
                 except couchdb.ResourceConflict:
-                    print('Conflict while deleting %s' % title)
+                    print('Conflict while deleting %s' % title_str)
+                except Exception:
+                    traceback.print_exc()
                 else:
-                    print('%s removed from the database' % title)
+                    print('%s removed from the database' % title_str)
             return
         try:
             aliases = set()
@@ -414,8 +437,8 @@ def main():
 
                 page = redirect_target.page
                 print('%s ==> %s' % (
-                    title,
-                    page.name + (('#'+frag) if frag else '')))
+                    display_str(title),
+                    display_str(page.name) + (('#'+frag) if frag else '')))
 
                 if redirect_count >= 10:
                     print('Too many redirect levels: %r' % aliases)
@@ -449,13 +472,13 @@ def main():
                 revid = doc.get('parse', {}).get('revid')
                 if page.revision == revid:
                     print('%s is up to date (rev. %s), skipping' %
-                          (title, revid))
+                          (display_str(title), revid))
                     inc_count('up_to_date')
                     return
                 else:
                     inc_count('updated')
                     print('New rev. %s is available for %s (have rev. %s)' %
-                          (page.revision, title, revid))
+                          (page.revision, display_str(title), revid))
             if args.delay:
                 time.sleep(args.delay)
             parse = site.api('parse', page=title)
@@ -463,10 +486,10 @@ def main():
             print ('Caught KeyboardInterrupt', ki)
             thread.interrupt_main()
         except couchdb.ResourceConflict:
-            print('Update conflict, skipping: %s' % title)
+            print('Update conflict, skipping: %s' % display_str(title))
             return
         except Exception:
-            print('Failed to process %s:' % title)
+            print('Failed to process %s:' % display_str(title))
             traceback.print_exc()
             inc_count('error')
             return
@@ -480,7 +503,7 @@ def main():
         try:
             db[title] = doc
         except couchdb.ResourceConflict:
-            print('Update conflict, skipping: %s' % title)
+            print('Update conflict, skipping: %s' % display_str(title))
             return
 
     import pylru
@@ -489,9 +512,10 @@ def main():
     def ipages(pages):
         for index, page in enumerate(pages):
             title = page.name
-            print('%7s %s' % (index, title))
+            title_str = display_str(title)
+            print('%7s %s' % (index, title_str))
             if title in seen:
-                print('Already saw %s, skipping' % (title,))
+                print('Already saw %s, skipping' % (title_str,))
                 continue
             seen[title] = True
             update_session(title)
