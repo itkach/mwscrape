@@ -266,6 +266,8 @@ def display_str(value, encoding='utf8'):
         value_str = repr(value).encode(encoding)
     return value_str
 
+def fmt_mw_tms(dt):
+    return datetime.strftime(dt, '%Y%m%d%H%M%S')
 
 def main():
 
@@ -350,17 +352,19 @@ def main():
             else:
                 yield title
 
-    def titles_from_recent_changes(timestamp):
+    def recently_changed_pages(timestamp):
         changes = site.recentchanges(start=timestamp,
                                      namespace=0,
                                      toponly=1,
-                                     show='!minor|!redirect|!anon')
-        for change in changes:
-            title = change.get('title')
+                                     type='edit|new',
+                                     dir='newer',
+                                     show='!minor|!redirect|!anon|!bot')
+        for page in changes:
+            title = page.get('title')
             if title:
                 doc = db.get(title)
                 doc_revid = doc.get('parse', {}).get('revid') if doc else None
-                revid = change.get('revid')
+                revid = page.get('revid')
                 if doc_revid == revid:
                     continue
                 yield title
@@ -373,14 +377,13 @@ def main():
     elif args.changes_since or args.recent:
         if args.recent:
             recent_days = args.recent_days
-            changes_since = datetime.strftime(
-                datetime.utcnow() + timedelta(days=-recent_days),
-                '%Y%m%d%H%M%S')
+            changes_since = fmt_mw_tms(datetime.utcnow() + timedelta(days=-recent_days))
         else:
             changes_since = args.changes_since.ljust(14, '0')
         print('Getting recent changes (since %s)' % changes_since)
         pages = (page_list[title]
-                 for title in titles_from_recent_changes(changes_since))
+                 for title in recently_changed_pages(changes_since))
+
     else:
         print('Starting at %s' % start_page_name)
         pages = site.allpages(start=start_page_name,
@@ -478,8 +481,10 @@ def main():
                     return
                 else:
                     inc_count('updated')
-                    print('New rev. %s is available for %s (have rev. %s)' %
-                          (page.revision, display_str(title), revid))
+                    print('[%s] rev. %s => %s %s' %
+                          (time.strftime('%x %X', (page.touched))
+                           if page.touched else '?',
+                           revid, page.revision, display_str(title)))
             if args.delay:
                 time.sleep(args.delay)
             parse = site.api('parse', page=title)
