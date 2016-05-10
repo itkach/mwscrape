@@ -6,11 +6,8 @@
 
 from __future__  import print_function
 import argparse
-import couchdb
 import fcntl
 import hashlib
-import mwclient
-import mwclient.page
 import os
 import socket
 import traceback
@@ -25,6 +22,10 @@ from datetime import datetime, timedelta
 from multiprocessing import RLock
 from multiprocessing.pool import ThreadPool
 from contextlib import contextmanager
+
+import couchdb
+import mwclient
+import mwclient.page
 
 
 def fix_server_url(general_siteinfo):
