@@ -11,12 +11,15 @@ import hashlib
 import os
 import socket
 import traceback
-import urlparse
 import tempfile
 import time
-import thread
+import _thread
 import random
 
+import urllib.parse
+
+from urllib.parse import urlparse
+from urllib.parse import urlunparse
 from collections import namedtuple
 from datetime import datetime, timedelta
 from multiprocessing import RLock
@@ -49,11 +52,11 @@ def fix_server_url(general_siteinfo):
     """
     server = general_siteinfo.get('server', '')
     if server:
-        p = urlparse.urlparse(server)
+        p = urlparse(server)
         if not p.scheme:
-            server = urlparse.urlunparse(
-                urlparse.ParseResult('http', p.netloc, p.path,
-                                     p.params, p.query, p.fragment))
+            server = urlunparse(
+                urllib.parse.ParseResult('http', p.netloc, p.path,
+                                         p.params, p.query, p.fragment))
             general_siteinfo['server'] = server
     return server
 
@@ -213,14 +216,14 @@ def redirects_to(site, from_title):
 
 
 def scheme_and_host(site_host):
-    p = urlparse.urlparse(site_host)
+    p = urlparse(site_host)
     scheme = p.scheme if p.scheme else 'https'
     host = p.netloc if p.scheme else site_host
     return scheme, host
 
 
 def mkcouch(url):
-    parsed = urlparse.urlparse(url)
+    parsed = urlparse(url)
     server_url = parsed.scheme + '://'+ parsed.netloc
     server = couchdb.Server(server_url)
     user = parsed.username
@@ -247,27 +250,9 @@ def flock(path):
             lock_fd.close()
 
 
-def display_str(value, encoding='utf8'):
-    """
-
-    >>> display_str(None)
-    ''
-
-    >>> display_str(u'\u0000')
-    '\\x00'
-
-    >>> display_str(u'\u044b', encoding='ascii')
-    "u'\\\\u044b'"
-
-    """
-    try:
-        value_str = '' if value is None else value.encode(encoding)
-    except UnicodeEncodeError:
-        value_str = repr(value).encode(encoding)
-    return value_str
-
 def fmt_mw_tms(dt):
     return datetime.strftime(dt, '%Y%m%d%H%M%S')
+
 
 def main():
 
@@ -372,7 +357,7 @@ def main():
     page_list = mwclient.listing.PageList(site, namespace=args.namespace)
 
     if args.titles:
-        pages = (page_list[title.decode('utf8')]
+        pages = (page_list[title]
                  for title in titles_from_args(args.titles))
     elif args.changes_since or args.recent:
         if args.recent:
@@ -411,20 +396,19 @@ def main():
     def process(page):
         title = page.name
         if not page.exists:
-            title_str = display_str(title)
-            print('Not found: %s' % title_str)
+            print('Not found: %s' % title)
             inc_count('not_found')
             if args.delete_not_found:
                 try:
                     del db[title]
                 except couchdb.ResourceNotFound:
-                    print('%s was not in the database' % title_str)
+                    print('%s was not in the database' % title)
                 except couchdb.ResourceConflict:
-                    print('Conflict while deleting %s' % title_str)
+                    print('Conflict while deleting %s' % title)
                 except Exception:
                     traceback.print_exc()
                 else:
-                    print('%s removed from the database' % title_str)
+                    print('%s removed from the database' % title)
             return
         try:
             aliases = set()
@@ -441,8 +425,8 @@ def main():
 
                 page = redirect_target.page
                 print('%s ==> %s' % (
-                    display_str(title),
-                    display_str(page.name) + (('#'+frag) if frag else '')))
+                    title,
+                    page.name + (('#'+frag) if frag else '')))
 
                 if redirect_count >= 10:
                     print('Too many redirect levels: %r' % aliases)
@@ -476,7 +460,7 @@ def main():
                 revid = doc.get('parse', {}).get('revid')
                 if page.revision == revid:
                     print('%s is up to date (rev. %s), skipping' %
-                          (display_str(title), revid))
+                          (title, revid))
                     inc_count('up_to_date')
                     return
                 else:
@@ -484,18 +468,18 @@ def main():
                     print('[%s] rev. %s => %s %s' %
                           (time.strftime('%x %X', (page.touched))
                            if page.touched else '?',
-                           revid, page.revision, display_str(title)))
+                           revid, page.revision, title))
             if args.delay:
                 time.sleep(args.delay)
             parse = site.api('parse', page=title)
         except KeyboardInterrupt as ki:
             print ('Caught KeyboardInterrupt', ki)
-            thread.interrupt_main()
+            _thread.interrupt_main()
         except couchdb.ResourceConflict:
-            print('Update conflict, skipping: %s' % display_str(title))
+            print('Update conflict, skipping: %s' % title)
             return
         except Exception:
-            print('Failed to process %s:' % display_str(title))
+            print('Failed to process %s:' % title)
             traceback.print_exc()
             inc_count('error')
             return
@@ -509,8 +493,11 @@ def main():
         try:
             db[title] = doc
         except couchdb.ResourceConflict:
-            print('Update conflict, skipping: %s' % display_str(title))
+            print('Update conflict, skipping: %s' % title)
             return
+        except Exception as ex:
+            print('Error handling title %r' % title)
+            traceback.print_exc()
 
     import pylru
     seen = pylru.lrucache(10000)
@@ -518,10 +505,9 @@ def main():
     def ipages(pages):
         for index, page in enumerate(pages):
             title = page.name
-            title_str = display_str(title)
-            print('%7s %s' % (index, title_str))
+            print('%7s %s' % (index, title))
             if title in seen:
-                print('Already saw %s, skipping' % (title_str,))
+                print('Already saw %s, skipping' % (title,))
                 continue
             seen[title] = True
             update_session(title)
@@ -529,7 +515,7 @@ def main():
 
 
     with flock(os.path.join(tempfile.gettempdir(),
-                            hashlib.sha1(host).hexdigest())):
+                            hashlib.sha1(host.encode('utf-8')).hexdigest())):
         if args.speed and not args.delay:
             pool = ThreadPool(processes=args.speed*2)
             for _result in pool.imap(process, ipages(pages)):
