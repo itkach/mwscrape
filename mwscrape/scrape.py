@@ -214,7 +214,7 @@ def redirects_to(site, from_title):
 
 def scheme_and_host(site_host):
     p = urlparse.urlparse(site_host)
-    scheme = p.scheme if p.scheme else 'https'
+    scheme = p.scheme if p.scheme else 'http'
     host = p.netloc if p.scheme else site_host
     return scheme, host
 
