@@ -14,19 +14,31 @@ processing.
    Consult your operating system documentation and these projects'
    websites for installation instructions.
 
-   For example, on Ubuntu 14.04, the following command installs
+   For example, on Ubuntu 18.04, the following command installs
    required packages:
 
    #+BEGIN_SRC sh
-   sudo apt-get install python2.7 python-virtualenv couchdb git
+   sudo apt-get install python2.7 python-virtualenv git
    #+END_SRC
 
-   Start CouchDB:
-
+   To install CouchDB first enable the Apache CouchDB package repository:
+   
    #+BEGIN_SRC sh
-   sudo service couchdb start
+   echo "deb https://apache.bintray.com/couchdb-deb bionic main" | sudo tee -a /etc/apt/sources.list
    #+END_SRC
-
+   
+   Then install the repository key:
+   
+   #+BEGIN_SRC sh
+   curl -L https://couchdb.apache.org/repo/bintray-pubkey.asc | sudo apt-key add -
+   #+END_SRC 
+   
+   And finally update the repository cache and install the package:
+   
+   #+BEGIN_SRC sh
+   sudo apt-get update && sudo apt-get install couchdb
+   #+END_SRC
+   
    By default CouchDB uses /snappy/ for file compression. Change
    ~file_compression~ configuration parameter in ~couchdb~ config section to
    /deflate_6/. This reduces database disc space usage
