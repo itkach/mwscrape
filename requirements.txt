@@ -1,0 +1,5 @@
+futures
+CouchDB >= 0.10'
+mwclient >= 0.7.2'
+pylru
+filelock
