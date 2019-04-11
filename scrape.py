@@ -17,6 +17,8 @@ import tempfile
 import time
 import _thread
 import random
+import pylru
+
 
 from collections import namedtuple
 from datetime import datetime, timedelta
@@ -26,8 +28,6 @@ from contextlib import contextmanager
 
 import couchdb
 import mwclient
-import mwclient.page
-
 
 def fix_server_url(general_siteinfo):
 	"""
@@ -234,21 +234,9 @@ def mkcouch(url):
 
 @contextmanager
 def flock(path):
-	with open(path, 'w') as lock_fd:
-		try:
-			FileLock(lock_fd)
-			yield
-		except Exception as ex:
-			if ex.errno == 11:
-				print (
-					'Scrape for this host is already in progress. '
-					'Use --speed option instead of starting multiple processes.')
-			raise SystemExit(1)
-		finally:
-			lock_fd.close()
+	FileLock(path)
 
-
-def display_str(value, encoding='utf8'):
+def display_str(value, encoding='utf-8'):
 	"""
 
 	>>> display_str(None)
@@ -262,9 +250,10 @@ def display_str(value, encoding='utf8'):
 
 	"""
 	try:
-		value_str = '' if value is None else value.encode(encoding)
+		value_str = '' if value is None else value.encode(encoding).decode(encoding)
 	except UnicodeEncodeError:
 		value_str = repr(value).encode(encoding)
+		
 	return value_str
 
 def fmt_mw_tms(dt):
@@ -433,7 +422,8 @@ def main():
 			while page.redirect:
 				redirect_count += 1
 				redirect_target = redirects_to(site, page.name)
-				frag = redirect_target.fragment.decode("utf-8")
+				frag = redirect_target.fragment
+				
 				if frag:
 					alias = (title, frag)
 				else:
@@ -443,7 +433,7 @@ def main():
 				page = redirect_target.page
 				print('%s ==> %s' % (
 					display_str(title),
-					display_str(page.name) + (('#'+frag) if frag else '')))
+					display_str(page.name) + (("#"+frag) if frag else '')))
 
 				if redirect_count >= 10:
 					print('Too many redirect levels: %r' % aliases)
@@ -491,7 +481,7 @@ def main():
 			parse = site.api('parse', page=title)
 		except KeyboardInterrupt as ki:
 			print ('Caught KeyboardInterrupt', ki)
-			__thread.interrupt_main()
+			_thread.interrupt_main()
 		except couchdb.ResourceConflict:
 			print('Update conflict, skipping: %s' % display_str(title))
 			return
@@ -513,14 +503,13 @@ def main():
 			print('Update conflict, skipping: %s' % display_str(title))
 			return
 
-	import pylru
 	seen = pylru.lrucache(10000)
 
 	def ipages(pages):
 		for index, page in enumerate(pages):
 			title = page.name
 			title_str = display_str(title)
-			print('%7s %s' % (index, title_str))
+			print('%7s. %s' % (index, title_str))
 			if title in seen:
 				print('Already saw %s, skipping' % (title_str,))
 				continue
@@ -528,17 +517,21 @@ def main():
 			update_session(title)
 			yield page
 
+	buf = os.path.join(
+		tempfile.gettempdir(),
+		hashlib.sha1(host.encode('utf-8')).hexdigest()
+	)
+	
+	flock(buf)
+	
+	if args.speed and not args.delay:
+		pool = ThreadPool(processes=args.speed*2)
+		for _result in pool.imap(process, ipages(pages)):
+			pass
 
-	with flock(os.path.join(tempfile.gettempdir(),
-							hashlib.sha1(host.encode('utf-8')).hexdigest())):
-		if args.speed and not args.delay:
-			pool = ThreadPool(processes=args.speed*2)
-			for _result in pool.imap(process, ipages(pages)):
-				pass
-
-		else:
-			for page in ipages(pages):
-				process(page)
+	else:
+		for page in ipages(pages):
+			process(page)
 
 
 if __name__ == '__main__':
