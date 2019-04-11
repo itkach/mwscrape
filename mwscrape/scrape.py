@@ -12,10 +12,10 @@ import hashlib
 import os
 import socket
 import traceback
-import urlparse
+from urllib.parse import urlparse
 import tempfile
 import time
-import thread
+import _thread
 import random
 
 from collections import namedtuple
@@ -50,7 +50,7 @@ def fix_server_url(general_siteinfo):
 	"""
 	server = general_siteinfo.get('server', '')
 	if server:
-		p = urlparse.urlparse(server)
+		p = urlparse(server)
 		if not p.scheme:
 			server = urlparse.urlunparse(
 				urlparse.ParseResult('http', p.netloc, p.path,
@@ -214,14 +214,14 @@ def redirects_to(site, from_title):
 
 
 def scheme_and_host(site_host):
-	p = urlparse.urlparse(site_host)
+	p = urlparse(site_host)
 	scheme = p.scheme if p.scheme else 'https'
 	host = p.netloc if p.scheme else site_host
 	return scheme, host
 
 
 def mkcouch(url):
-	parsed = urlparse.urlparse(url)
+	parsed = urlparse(url)
 	server_url = parsed.scheme + '://'+ parsed.netloc
 	server = couchdb.Server(server_url)
 	user = parsed.username
@@ -236,9 +236,9 @@ def mkcouch(url):
 def flock(path):
 	with open(path, 'w') as lock_fd:
 		try:
-			fcntl.flock(lock_fd, fcntl.LOCK_EX|fcntl.LOCK_NB)
+			FileLock(lock_fd)
 			yield
-		except IOError as ex:
+		except Exception as ex:
 			if ex.errno == 11:
 				print (
 					'Scrape for this host is already in progress. '
@@ -491,7 +491,7 @@ def main():
 			parse = site.api('parse', page=title)
 		except KeyboardInterrupt as ki:
 			print ('Caught KeyboardInterrupt', ki)
-			thread.interrupt_main()
+			__thread.interrupt_main()
 		except couchdb.ResourceConflict:
 			print('Update conflict, skipping: %s' % display_str(title))
 			return
