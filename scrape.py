@@ -433,7 +433,7 @@ def main():
 			while page.redirect:
 				redirect_count += 1
 				redirect_target = redirects_to(site, page.name)
-				frag = redirect_target.fragment
+				frag = redirect_target.fragment.decode("utf-8")
 				if frag:
 					alias = (title, frag)
 				else:
@@ -530,7 +530,7 @@ def main():
 
 
 	with flock(os.path.join(tempfile.gettempdir(),
-							hashlib.sha1(host).hexdigest())):
+							hashlib.sha1(host.encode('utf-8')).hexdigest())):
 		if args.speed and not args.delay:
 			pool = ThreadPool(processes=args.speed*2)
 			for _result in pool.imap(process, ipages(pages)):
