@@ -1,5 +1,6 @@
 *.pyc
 *~
 *.egg-info
+*.slob
 __pycache__
 README.html
