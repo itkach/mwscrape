@@ -1,5 +1,13 @@
 from distutils.core import setup
 
+import os
+import sys
+
+if 'publish' in sys.argv:
+    os.system('python setup.py sdist upload')
+    sys.exit()
+
+
 setup(
 		name='mwscrape',
 		version='1.1',
@@ -8,8 +16,10 @@ setup(
 		author_email='itkach@gmail.com',
 		url='http://github.com/itkach/mwscrape',
 		license='MPL 2.0',
-		#packages=['mwscrape'],
+		
+		#packages=['mwscrape'], # don't have to have this to create a package
 		#package_dir={'': '..'},
+		
 		#mwclient appears to need six, but doesn't declare it as dependency
 		install_requires=['futures', 'CouchDB >= 0.10', 'mwclient >= 0.7.2', 'pylru'],
 		entry_points={'console_scripts': [
