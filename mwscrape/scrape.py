@@ -329,7 +329,7 @@ def main():
         sessions_db['$current'] = current_doc
 
 
-    site = mwclient.Site((scheme, host), path=args.site_path, ext=args.site_ext)
+    site = mwclient.Site(host, path=args.site_path, ext=args.site_ext, scheme=scheme)
 
     update_siteinfo(site, couch_server, db_name)
 
