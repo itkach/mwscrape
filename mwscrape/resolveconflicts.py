@@ -9,7 +9,7 @@ import couchdb
 import time
 
 from datetime import timedelta
-from urlparse import urlparse
+from urllib.parse import urlparse
 from concurrent import futures
 
 
@@ -30,11 +30,14 @@ def mkclient(couch_url):
     server = couchdb.Server(server_url)
     username = parsed_url.username
     password = parsed_url.password
-    print "User %s%s at %s, database %s" % (
-        username,
-        "" if password else " (no password)",
-        server.resource.url,
-        couch_db,
+    print(
+        "User %s%s at %s, database %s"
+        % (
+            username,
+            "" if password else " (no password)",
+            server.resource.url,
+            couch_db,
+        )
     )
     if password:
         server.resource.credentials = (username, password)
@@ -86,7 +89,7 @@ def resolve(db, doc_id, verbose=False):
             messages.append("[no conflicts] %s" % doc_id)
         result = False
     if messages:
-        print "\n".join(messages)
+        print("\n".join(messages))
     return result
 
 
@@ -102,7 +105,7 @@ def main():
     with futures.ThreadPoolExecutor(max_workers=args.workers) as executor:
         for row in db.iterview("_all_docs", args.batch_size, **viewoptions):
             executor.submit(resolve, db, row.id, verbose=args.verbose)
-    print "Done in %s" % timedelta(seconds=int(time.time() - t0))
+    print("Done in %s" % timedelta(seconds=int(time.time() - t0)))
 
 
 if __name__ == "__main__":
