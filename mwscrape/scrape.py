@@ -8,12 +8,11 @@ import argparse
 import fcntl
 import hashlib
 import os
+import random
 import socket
-import traceback
 import tempfile
 import time
-import _thread
-import random
+import traceback
 
 import urllib.parse
 
@@ -28,6 +27,9 @@ from contextlib import contextmanager
 import couchdb
 import mwclient
 import mwclient.page
+import pylru
+
+import _thread
 
 
 def fix_server_url(general_siteinfo):
@@ -260,8 +262,7 @@ def redirects_to(site, from_title):
                     fragment=page.get("tofragment", u""),
                 )
         return None
-    else:
-        return None
+    return None
 
 
 def scheme_and_host(site_host):
@@ -511,24 +512,21 @@ def main():
                     print("%s is up to date (rev. %s), skipping" % (title, revid))
                     inc_count("up_to_date")
                     return
-                else:
-                    inc_count("updated")
-                    print(
-                        "[%s] rev. %s => %s %s"
-                        % (
-                            time.strftime("%x %X", (page.touched))
-                            if page.touched
-                            else "?",
-                            revid,
-                            page.revision,
-                            title,
-                        )
+                inc_count("updated")
+                print(
+                    "[%s] rev. %s => %s %s"
+                    % (
+                        time.strftime("%x %X", (page.touched)) if page.touched else "?",
+                        revid,
+                        page.revision,
+                        title,
                     )
+                )
             if args.delay:
                 time.sleep(args.delay)
             parse = site.api("parse", page=title)
-        except KeyboardInterrupt as ki:
-            print("Caught KeyboardInterrupt", ki)
+        except KeyboardInterrupt as kbd:
+            print("Caught KeyboardInterrupt", kbd)
             _thread.interrupt_main()
         except couchdb.ResourceConflict:
             print("Update conflict, skipping: %s" % title)
@@ -550,11 +548,9 @@ def main():
         except couchdb.ResourceConflict:
             print("Update conflict, skipping: %s" % title)
             return
-        except Exception as ex:
+        except Exception:
             print("Error handling title %r" % title)
             traceback.print_exc()
-
-    import pylru
 
     seen = pylru.lrucache(10000)
 
