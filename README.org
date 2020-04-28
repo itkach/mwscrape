@@ -6,10 +6,8 @@ processing.
 
    /mwscrape/ depends on the following:
 
-   - [[http://couchdb.apache.org][CouchDB]] (1.3.0 or newer but older than 3.0)
-   - [[http://python.org][Python 2.7]]
-   - [[http://gitscm.com/][git]]
-   - [[https://pypi.python.org/pypi/virtualenv/][virtualenv]]
+   - [[http://couchdb.apache.org][CouchDB]] (1.3.0 or newer)
+   - [[http://python.org][Python 3 (3.6 or newer]])
 
    Consult your operating system documentation and these projects'
    websites for installation instructions.
@@ -18,27 +16,52 @@ processing.
    required packages:
 
    #+BEGIN_SRC sh
-   sudo apt-get install python2.7 python-virtualenv git
+   sudo apt-get install python3 python3-venv
    #+END_SRC
 
    To install CouchDB first enable the Apache CouchDB package repository:
-   
+
    #+BEGIN_SRC sh
    echo "deb https://apache.bintray.com/couchdb-deb bionic main" | sudo tee -a /etc/apt/sources.list
    #+END_SRC
-   
+
    Then install the repository key:
-   
+
    #+BEGIN_SRC sh
    curl -L https://couchdb.apache.org/repo/bintray-pubkey.asc | sudo apt-key add -
-   #+END_SRC 
-   
-   And finally update the repository cache and install the package:
-   
-   #+BEGIN_SRC sh
-   sudo apt-get update && sudo apt-get install couchdb=2.3.1~bionic
    #+END_SRC
-   
+
+   And finally update the repository cache and install the package:
+
+   #+BEGIN_SRC sh
+   sudo apt-get update && sudo apt-get install couchdb
+   #+END_SRC
+
+   Alternatively, run CouchDB with [[https://www.docker.com/][docker]]:
+
+   #+BEGIN_SRC sh
+   docker run --detach --rm --name couchdb \
+   -v $(PWD)/.couchdb:/opt/couchdb/data \
+   -p 5984:5984 \
+   couchdb:2
+   #+END_SRC
+
+   See [[https://hub.docker.com/_/couchdb/][CouchDB Docker image docs]] for more details.
+
+   Note that starting with CouchDB 3.0 an admin user must be set
+   up. See [[https://docs.couchdb.org/en/stable/intro/security.html#creating-a-new-admin-user][CouchDB documentation]].
+
+   With docker:
+
+   #+BEGIN_SRC sh
+   docker run --detach --rm --name couchdb \
+   -e COUCHDB_USER=admin \
+   -e COUCHDB_PASSWORD=secret \
+   -v $(PWD)/.couchdb:/opt/couchdb/data \
+   -p 5984:5984 \
+   couchdb:3
+   #+END_SRC
+
    By default CouchDB uses /snappy/ for file compression. Change
    ~file_compression~ configuration parameter in ~couchdb~ config section to
    /deflate_6/ (Maximum is /deflate_9/). This reduces database disc space usage
@@ -47,7 +70,7 @@ processing.
    Create new Python virtual environment:
 
    #+BEGIN_SRC sh
-   virtualenv env-mwscrape -p python2.7
+   python3 -m venv env-mwscrape
    #+END_SRC
 
    Activate it:
@@ -58,14 +81,14 @@ processing.
 
    Install /mwscrape/ from source:
    #+BEGIN_SRC sh
-   pip install git+https://github.com/itkach/mwscrape
+   pip install https://github.com/itkach/mwscrape/tarball/master
    #+END_SRC
 
 
 ** Usage
 
    #+BEGIN_SRC sh
-   
+
 usage: mwscrape [-h] [--site-path SITE_PATH] [--site-ext SITE_EXT] [-c COUCH]
                 [--db DB] [--titles TITLES [TITLES ...]] [--start START]
                 [--changes-since CHANGES_SINCE] [--recent-days RECENT_DAYS]
@@ -76,7 +99,7 @@ usage: mwscrape [-h] [--site-path SITE_PATH] [--site-ext SITE_EXT] [-c COUCH]
 
 positional arguments:
   site                  MediaWiki site to scrape (host name), e.g.
-                        en.m.wikipedia.org
+                        en.wikipedia.org
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -115,16 +138,18 @@ optional arguments:
 
    #+END_SRC
 
-For example, to get English Wiktionary:
+The following examples are for with CouchDB < 3.0 running in admin party mode.
+
+To get English Wiktionary:
 
    #+BEGIN_SRC sh
-   mwscrape en.m.wiktionary.org
+   mwscrape en.wiktionary.org
    #+END_SRC
 
-to get the same but work through list of titles in reverse order:
+To get the same but work through list of titles in reverse order:
 
    #+BEGIN_SRC sh
-   mwscrape en.m.wiktionary.org --desc
+   mwscrape en.wiktionary.org --desc
    #+END_SRC
 
 Some sites expose Mediawiki API at path different from Wikipedia's
@@ -134,22 +159,25 @@ default, specify it with ~--site-path~:
    mwscrape lurkmore.to --site-path=/
    #+END_SRC
 
+For CouchDB with admin user ~admin~ and password ~secret~ specify
+credentials as part of CouchDB URL:
+
+   #+BEGIN_SRC sh
+   mwscrape -c http://admin:secret@localhost:5984 en.wiktionary.org
+   #+END_SRC
 
 /mwscrape/ compares page revisions reported by MediaWiki API with
 revisions of previously scraped pages in CouchDB and requests parsed
-page data if new revision is available. CouchDB data dumps (compressed
-with [[http://tukaani.org/xz/][xz]]) for some Wikipedia sites are available at
-http://dl.aarddict.org/mwcouch. Download database file to
-CouchDB's data directory (e.g. ~/var/lib/couchdb~) and decompress.
+page data if new revision is available.
 
 /mwscrape/ also creates a CouchDB design document ~w~ with show
 function ~html~ to allow viewing article html returned by MediaWiki
 API and navigating to html of other collected articles.
 For example, to view rendered html for article /A/ in
-database /simple-m-wikipedia-org/, in a web browser go to the
+database /simple-wikipedia-org/, in a web browser go to the
 following address (assuming CouchDB is running on localhost):
 
-http://127.0.0.1:5984/simple-m-wikipedia-org/_design/w/_show/html/A
+http://127.0.0.1:5984/simple-wikipedia-org/_design/w/_show/html/A
 
 If databases are combined via replication articles with the same
 title will be stored as [[https://wiki.apache.org/couchdb/Replication_and_conflicts][conflicts]]. /mwresolvec/ script is

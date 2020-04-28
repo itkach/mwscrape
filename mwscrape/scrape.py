@@ -95,7 +95,7 @@ def parse_args():
     argparser.add_argument(
         "site",
         nargs="?",
-        help=("MediaWiki site to scrape (host name), " "e.g. en.m.wikipedia.org"),
+        help=("MediaWiki site to scrape (host name), " "e.g. en.wikipedia.org"),
     )
     argparser.add_argument(
         "--site-path",
