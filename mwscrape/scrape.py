@@ -258,7 +258,7 @@ Redirect = namedtuple("Redirect", "page fragment")
 
 
 def redirects_to(site, from_title):
-    """ Same as mwclient.page.Page.redirects_to except it returns page and fragment
+    """Same as mwclient.page.Page.redirects_to except it returns page and fragment
     in a named tuple instead of just target page
     """
     info = site.api("query", prop="pageprops", titles=from_title, redirects="")["query"]
@@ -267,7 +267,7 @@ def redirects_to(site, from_title):
             if page["from"] == from_title:
                 return Redirect(
                     page=mwclient.page.Page(site, page["to"]),
-                    fragment=page.get("tofragment", u""),
+                    fragment=page.get("tofragment", ""),
                 )
         return None
     return None
@@ -314,7 +314,6 @@ def fmt_mw_tms(dt):
 
 
 def main():
-
     args = parse_args()
 
     socket.setdefaulttimeout(args.timeout)
