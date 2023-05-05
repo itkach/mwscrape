@@ -27,6 +27,7 @@ from contextlib import contextmanager
 import couchdb
 import mwclient
 import mwclient.page
+import mwclient.client
 import pylru
 
 import _thread
@@ -222,6 +223,13 @@ def parse_args():
         help=("ID of MediaWiki namespace to " "scrape. Default: %(default)s"),
     )
 
+    argparser.add_argument(
+        "--user-agent",
+        type=str,
+        default=None,
+        help=("HTTP user agent string. Default: %s" % mwclient.client.USER_AGENT),
+    )
+
     return argparser.parse_args()
 
 
@@ -364,7 +372,16 @@ def main():
         current_doc["session_id"] = session_id
         sessions_db["$current"] = current_doc
 
-    site = mwclient.Site(host, path=args.site_path, ext=args.site_ext, scheme=scheme)
+    headers = {}
+    if args.user_agent:
+        headers = {"User-Agent": args.user_agent}
+    site = mwclient.Site(
+        host,
+        path=args.site_path,
+        ext=args.site_ext,
+        scheme=scheme,
+        custom_headers=headers,
+    )
 
     update_siteinfo(site, couch_server, db_name)
 
