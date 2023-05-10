@@ -104,8 +104,8 @@ positional arguments:
 optional arguments:
   -h, --help            show this help message and exit
   --site-path SITE_PATH
-                        MediaWiki site API pathDefault: /w/
-  --site-ext SITE_EXT   MediaWiki site API script extensionDefault: .php
+                        MediaWiki site API path. Default: /w/
+  --site-ext SITE_EXT   MediaWiki site API script extension. Default: .php
   -c COUCH, --couch COUCH
                         CouchDB server URL. Default: http://localhost:5984
   --db DB               CouchDB database name. If not specified, the name will
@@ -135,6 +135,15 @@ optional arguments:
   --delete-not-found    Remove non-existing pages from the database
   --speed {0,1,2,3,4,5}
                         Scrape speed
+  --delay
+                        Pause before requesting rendered article for 
+                        this many seconds.
+                        Some sites limit request rate so that even
+                        single-threaded, request-at-a-time scrapes
+                        are too fast and additional delay needs
+                        to be introduced
+  --namespace           ID of MediaWiki namespace to " "scrape.
+  --user-agent          HTTP user agent string.
 
    #+END_SRC
 
