@@ -12,29 +12,29 @@ processing.
    Consult your operating system documentation and these projects'
    websites for installation instructions.
 
-   For example, on Ubuntu 18.04, the following command installs
+   For example, on Ubuntu 22.04, the following command installs
    required packages:
 
    #+BEGIN_SRC sh
-   sudo apt-get install python3 python3-venv
+   sudo apt install python3 python3-venv curl apt-transport-https gnupg
    #+END_SRC
-
-   To install CouchDB first enable the Apache CouchDB package repository:
+  
+   To install CouchDB first download and save the Apache CouchDB repository public key
 
    #+BEGIN_SRC sh
-   echo "deb https://apache.bintray.com/couchdb-deb bionic main" | sudo tee -a /etc/apt/sources.list
+   curl https://couchdb.apache.org/repo/keys.asc | gpg --dearmor | sudo tee /usr/share/keyrings/couchdb-archive-keyring.gpg >/dev/null 2>&1
    #+END_SRC
 
-   Then install the repository key:
+   Then аdd the official Apache CouchDB APT repository to your system’s sources list:
 
    #+BEGIN_SRC sh
-   curl -L https://couchdb.apache.org/repo/bintray-pubkey.asc | sudo apt-key add -
+   source /etc/os-release && echo "deb [signed-by=/usr/share/keyrings/couchdb-archive-keyring.gpg] https://apache.jfrog.io/artifactory/couchdb-deb/ ${VERSION_CODENAME} main" | sudo tee /etc/apt/sources.list.d/couchdb.list >/dev/null
    #+END_SRC
 
    And finally update the repository cache and install the package:
 
    #+BEGIN_SRC sh
-   sudo apt-get update && sudo apt-get install couchdb
+   sudo apt update && sudo apt install couchdb
    #+END_SRC
 
    Alternatively, run CouchDB with [[https://www.docker.com/][docker]]:
